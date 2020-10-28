@@ -2,8 +2,8 @@
 
 ###########################
 #  Run this as:
-# 'script_name.py L1.fasta long_reads_input_file.fasta outfile.txt'
-#
+# 'script_name.py {mobileElementName} {mobileElementSeq.fasta} {long_reads_input_file.fasta} {outfile.txt}'
+#  Accepted mobile element names: L1HS, AluYa5, AluYb8, SVA_E, SVA_F
 ##########################
 
 import sys
@@ -12,16 +12,42 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio import Align
 
-L1_fasta = sys.argv[1]
-read_fasta = sys.argv[2]
-outfile = sys.argv[3]
+mobile_element_name = sys.argv[1]
+mobile_element_fasta = sys.argv[2]
+read_fasta = sys.argv[3]
+outfile = sys.argv[4]
+
+########################################################
+# Store mobile element sequence and reverse complement #
+########################################################
+mobile_element = SeqIO.read(mobile_element_fasta, "fasta")
+mobile_element_seq = mobile_element.seq
+rev_comp_mobile_element_seq = mobile_element_seq.reverse_complement()
 
 ############################################
-# Store L1 sequence and reverse complement #
+# Store length of mobile element sequences #
 ############################################
-L1 = SeqIO.read(L1_fasta, "fasta")
-L1_seq = L1.seq
-rev_comp_L1seq = L1_seq.reverse_complement()
+
+L1HS_len = 6059
+AluYa5_len = 311
+AluYb8_len = 318
+SVA_E_len = 1382
+SVA_F_len = 1375
+
+if mobile_element_name == L1HS:
+    mobile_element_len = L1HS_len
+
+elif mobile_element_name == AluYa5:
+    mobile_element_len = AluYa5_len
+
+elif mobile_element_name == AluYb8:
+    mobile_element_len = AluYb8_len
+
+elif mobile_element_name == SVA_E:
+    mobile_element_len = SVA_E_len
+
+elif mobile_element_name == SVA_F:
+    mobile_element_len = SVA_F_len
 
 ##################
 # Create Aligner #
@@ -47,18 +73,18 @@ with open(outfile, "w") as results_out:
 
         # Use Bio.Align package to do pairwise alignments
 
-        forward_alignments = aligner.align(seq.seq[:80], L1_seq)
+        forward_alignments = aligner.align(seq.seq[:80], mobile_element_seq)
         if not any(a.score >= 100 for a in forward_alignments):
             results_out.write("No alignments with score >= 100 on the forward strand" + "\n")
         else:
             if ((forward_alignments[0].aligned)[0][0][0]) == 0:
                 results_out.write("Forward alignment score: " + "\t" + str(forward_alignments[0].score) + "\n")
                 results_out.write(str(forward_alignments[0].aligned) + "\n")
-                results_out.write("Forward alignment starting L1HS base:" + "\t" + str((forward_alignments[0].aligned)[1][0][0] + 1) + "\n")
+                results_out.write("Forward alignment starting mobile element base:" + "\t" + str((forward_alignments[0].aligned)[1][0][0] + 1) + "\n")
             else:
                 results_out.write("Forward strand alignment does not begin at start of read" + "\n")
 
-        rev_comp_alignments = aligner.align(seq.seq[:80], rev_comp_L1seq)
+        rev_comp_alignments = aligner.align(seq.seq[:80], rev_comp_mobile_element_seq)
         if not any(a.score >= 100 for a in rev_comp_alignments):
             results_out.write("No alignments with score >= 100 on the reverse strand" + "\n")
             results_out.write("\n")
@@ -66,8 +92,8 @@ with open(outfile, "w") as results_out:
             if ((rev_comp_alignments[0].aligned)[0][0][0]) == 0:
                 results_out.write("Reverse strand alignment score: " + "\t" + str(rev_comp_alignments[0].score) + "\n")
                 results_out.write(str(rev_comp_alignments[0].aligned) + "\n")
-                results_out.write("Reverse alignment starting L1HS base:" + "\t" + str( 6059 - ((rev_comp_alignments[0].aligned)[1][0][0])) + "\n")
-                results_out.write("\n")
+                results_out.write("Reverse alignment starting mobile element base:" + "\t" + str( mobile_element_len - ((rev_comp_alignments[0].aligned)[1][0][0])) + "\n")
+                results_out.write("\n")  #subtracting the first alignment base from the size of the element to get the starting base with respect to the forward mobile element sequence
             else:
                 results_out.write("Reverse strand alignment does not begin at start of read" + "\n")
                 results_out.write("\n")

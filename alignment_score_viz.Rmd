@@ -1,0 +1,259 @@
+---
+title: "MEI alignment starting bases"
+output:
+  html_document:
+    df_print: paged
+---
+
+Reads sequenced with ONT were aligned to the mobile elements shown below.  
+The Bio.Align Python package was used to find local alignments and alignments were filtered  
+to include only those which aligned starting at the beginning of the read and received an
+alignment score >= 100.  
+  
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(root.dir='/Users/christopher/Documents/LINE1/', echo=FALSE, message=FALSE, warning=FALSE)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+library(knitr)
+library(ggpol)
+library(gridExtra)
+library(ggpubr)
+```
+
+
+```{r import data}
+
+# Load alignment file
+
+# Flongle L1 file path
+L1_flongle_NA12878_aligned_path <- "/Users/christopher/Documents/LINE1/results/combined_flongle_L1_NA12878_alignments_startingbase.txt"
+
+# minION L1 path
+L1_minION_NA12878_aligned_path <- "/Users/christopher/Documents/LINE1/results/combined_minION_L1_NA12878_alignments_startingbase.txt"
+
+# AluYa5 path
+AluYa5_aligned_path <- "/Users/christopher/Documents/LINE1/results/combined_aluYa5_alignments_startingbase.txt"
+
+# AluYb8 path
+AluYb8_aligned_path <- "/Users/christopher/Documents/LINE1/results/combined_aluYb8_alignments_startingbase.txt"
+
+# SVAE path
+SVAE_aligned_path <- "/Users/christopher/Documents/LINE1/results/combined_SVAE_alignments_startingbase.txt"
+
+# SVAF path
+SVAF_aligned_path <- "/Users/christopher/Documents/LINE1/results/combined_SVAF_alignments_startingbase.txt"
+
+
+# AluYa5 sequence
+AluYa5_seq <- read.delim("/Users/christopher/Documents/LINE1/data/AluYa5.fasta", colClasses = "character")
+
+
+# Create data frames
+L1_flongle_NA12878_df <- read.delim(L1_flongle_NA12878_aligned_path, sep = "\t",
+                            header = FALSE, col.names = c("strand", "starting_base"))#colClasses = c("character","factor"))
+L1_flongle_NA12878_filtered_df <- 
+  L1_flongle_NA12878_df %>% 
+  filter(starting_base >= 5910 & starting_base <=5926)   #only show alignments that started at base within a certain range
+
+
+L1_minION_NA12878_df <- read.delim(L1_minION_NA12878_aligned_path, sep = "\t",
+                            header = FALSE, col.names = c("strand", "starting_base"))
+L1_minION_NA12878_filtered_df <- 
+  L1_minION_NA12878_df %>% 
+  filter(starting_base >= 5935 & starting_base <=5960)   #only show alignments that started at base within a certain range
+
+AluYa5_df <- read.delim(AluYa5_aligned_path, sep = "\t",
+                            header = FALSE, col.names = c("strand", "starting_base"))
+
+AluYb8_df <- read.delim(AluYb8_aligned_path, sep = "\t",
+                            header = FALSE, col.names = c("strand", "starting_base"))
+
+SVA_E_df <- read.delim(SVAE_aligned_path, sep = "\t",
+                            header = FALSE, col.names = c("strand", "starting_base"))
+
+SVA_F_df <- read.delim(SVAF_aligned_path, sep = "\t",
+                            header = FALSE, col.names = c("strand", "starting_base"))
+                            
+
+```
+
+```{r prepare for plotting}
+
+# Prepare data for plotting reverse and forward strands by making the counts of the reverse strand negative
+
+# Separates counts for forward and reverse strand alignments
+L1_flongle_NA12878_filtered_plotting_df <-
+  L1_flongle_NA12878_filtered_df %>% 
+  group_by(strand, starting_base) %>% 
+  summarise(Freq = n()) %>% 
+  # a trick!
+  mutate(Freq = if_else(strand == "Reverse alignment starting L1HS base:", -Freq, Freq))
+
+
+# data frame for the labels of each facet.  This will be used to add the label of the genomic coordinates.
+#facet_labels <-data.frame(strand=c("Forward alignment starting L1HS base:","Reverse alignment starting L1HS base:"), label= c("5922","5915"), x_strand=c(5922, 5915), y_strand=c(640, -603))
+
+```
+
+### L1 flongle reads
+Reads were combined using results from the NA12878 experiments.  
+Total reads: 28,695  
+Reads passing filters: 1,923  
+Reads shown in plot, within reduced range: 1,672  
+
+Labels on bars are the starting base of the alignment, relative to the L1HS sequence.
+
+
+```{r barplot for flongle L1 starting base of alignment, with forward and reverse sequence as x-axes}
+# Plot counts of the base that alignments start at
+# Creating one plot for the forward strand, and one for the reverse strand, then combining.
+
+L1_flongle_NA12878_bar_forward <-
+ggplot(L1_flongle_NA12878_filtered_plotting_df, aes(x = starting_base, y = Freq)) +
+  geom_bar(stat = "identity" , fill = "#040084") +
+  scale_y_continuous(expand = c(0,0), # setting expand to zero removes the space that is created by default between where 0 on the y-axis starts and the x-axis
+                     limits = c(0,670)) +
+  scale_x_continuous(breaks = c(5910:5926), labels = c("A","T","A","C","C","T","A","A","T","G","C","T","A","G","A","T","G")) + # breaks assigns where ticks appear
+  theme( panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(),  #gets rid of grid lines and background
+         axis.text.x = element_text(size = 30, face="bold"), axis.title = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank(), axis.ticks.x = element_blank(),
+         legend.position = "none",
+         plot.margin = unit(c(1,1,-.2,1), "lines")) + #top, right, bottom, left.   Adjusted so there's less space between the plots when combined/stacked
+  geom_text(aes(x = 5922, y = 638, label= "5922"), size=6) #label the two largest bars with the genomic coordinate they correspond to
+  
+
+L1_flongle_NA12878_bar_reverse <-
+ggplot(L1_flongle_NA12878_filtered_plotting_df, aes(x = starting_base, y = Freq)) +
+  geom_bar(stat = "identity" , fill = "#FD7F00") +
+  scale_y_continuous(expand = c(0,0), # setting expand to zero removes the space that is created by default between where 0 on the y-axis starts and the x-axis
+                     limits = c(-630,0)) +
+  scale_x_continuous(breaks = c(5910:5926), labels = c("T","A","T","G","G","A","T","T","A","C","G","A","T","C","T","A","C"), position = "top") +
+  theme( panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(),  #gets rid of grid lines and background
+         axis.text.x = element_text(size = 30, face="bold"), axis.title = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank(), axis.ticks.x = element_blank(),
+         legend.position = "none",
+         plot.margin = unit(c(-.2,1,1,1), "lines")) +
+  geom_text(aes(x = 5915, y = -600, label= "5915"), size=6)
+  
+L1_flongle_NA12878_bar <-
+  ggarrange(L1_flongle_NA12878_bar_forward, L1_flongle_NA12878_bar_reverse, ncol = 1)
+
+
+# Show L1 flongle plot
+L1_flongle_NA12878_bar
+```
+  
+  
+
+
+### L1 minION reads
+Reads were combined using results from the NA12878 experiments.  
+Total reads: 107,778  
+Reads passing filters: 504  
+Reads shown in plot, within reduced range: 321
+
+Labels above the bars represent the alignment starting base relative to the L1HS sequence on the reverse strand (since almost all reads aligned to the reverse strand).  
+Only 1 read of the 321 that are plotted here was aligned to the forward strand within this range.
+
+
+```{r barplot for minION L1 alignment starting base, fig.width=10, fig.height=6}
+
+# L1 minION plot
+# This plot is filtered to show the range with the highest counts
+L1_minION_NA12878_bar <-  
+ggplot(L1_minION_NA12878_filtered_df, aes(x=starting_base, fill=strand)) +
+         geom_bar(width=.75, position = "dodge") +
+  scale_x_continuous(breaks = 5935:5960, labels = c("C","A","C","C","C","A","C","G","T","C","G","C","G","T","G","G","T","C","G","T","A","C","C","G","T","G") ) +
+  theme(aspect.ratio = .8) +
+  geom_text(aes(x = 5950, y = 127, label= "5950"), size=6) +
+  geom_text(aes(x = 5937, y = 50, label= "5937"), size=6)
+
+# Show L1 minION plot
+L1_minION_NA12878_bar
+```
+
+### AluYa5 reads
+Total reads: 1,061  
+Reads passing filters: 6
+```{r Alu ya5}
+AluYa5_df[order(AluYa5_df$starting_base, AluYa5_df$strand ),]
+
+AluYa5_df$base <- substring(AluYa5_seq[,], AluYa5_df$starting_base, AluYa5_df$starting_base)
+
+get_base <- function(coord) {
+  base <- substr(AluYa5_seq[,], coord, coord)
+  return(base)
+}
+
+AluYa5_df$base <- substring(AluYa5_seq[,], AluYa5_df$starting_base, AluYa5_df$starting_base)
+
+AluYa5_df %>%
+  mutate(base = substring(AluYa5_seq[,], AluYa5_df$starting_base, AluYa5_df$starting_base) )
+```
+
+### AluYb8 reads
+Total reads: 262  
+Reads passing filters: 2
+```{r Alu yb8}
+AluYb8_df[order(AluYb8_df$starting_base, AluYb8_df$strand ),]
+```
+
+
+### SVA_E
+Total reads: 13,891  
+Reads passing filters: 14
+```{r SVA_E}
+SVA_E_df %>% group_by_all %>% count
+```
+
+### SVA_F
+Total reads: 43,092  
+Reads passing filters: 94
+```{r SVA_F}
+SVA_F_df %>% group_by_all %>% count
+
+```
+
+```{r save plots}
+
+ggsave(plot = L1_flongle_NA12878_bar, filename = "/Users/christopher/Documents/LINE1/results/L1_flongle_NA12878_combined_startingbase_barplot.png")
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r create barplot of L1 starting base of alignment}
+
+## don't use this. It was the code I used when I created the version with a single shared x-axis.
+## I need two separate x-axes though, for the sequence of each DNA strand
+
+# na12878_L1_bar <-
+# ggplot(na12878_L1_filtered_plotting_df, aes(x = starting_base, y = Freq, fill = strand)) +
+#   geom_bar(stat = "identity") +
+#   facet_share(~strand, dir = "v", scales = "free", reverse_num = FALSE ) + # reverse_num would multiply the axis labels by -1, which I already did above 
+#   #labs(y = "Count", x = "starting base") + 
+#   theme( strip.background = element_blank(), strip.text = element_blank(), #gets rid of header bar and text for each faceted portion
+#          panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), #gets rid of grid lines and background
+#          axis.text.x = element_text(size = 40, face="bold", margin = margin(10,0,0,0)), axis.title = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank(), #slightly adjusted axis text to center it between the facets
+#          legend.title = element_blank(), legend.text = element_text(size=16),
+#          axis.ticks.length.x.bottom = unit(0,"cm")) +  #strange way of getting the tick marks to go away. I suspect the faceting made it tricky
+#   scale_fill_manual(labels = c("positive strand", "negative strand"), values=c("#040084", "#FD7F00")) + # these colors override the defaults from setting "fill = strand" above
+#   scale_x_continuous(breaks = c(5910:5926), labels = c("A","T","A","C","C","T","A","A","T","G","C","T","A","G","A","T","G")) +  #replace the genomic coordinates with nucleotide letters
+#   geom_text( data = facet_labels, aes(x = x_strand, y = y_strand, label=label), size=8) # use the face_labels dataframe to label the two largest bars with the genomic coordinate they correspond to
+# 
+# ggsave(plot = na12878_L1_bar, filename = "/Users/christopher/Documents/LINE1/results/na12878_combined_L1_startingbase_barplot.png")
+
+```
